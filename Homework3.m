@@ -7,17 +7,30 @@ f_der = @(x) x - cos(x);
 x_prev = 0.5;
 e = 1;
 iterations = 1;
+x = -1:0.001:1;
 
+figure;
+plot(x,f(x),'DisplayName','f(x)');
+hold on
+%plot(x,f_der(x),'DisplayName','f''(x)');
+l = refline([0 0]);
+l.Color = [0,0,0];
+l.LineStyle = '-';
+l.LineWidth = 0.1;
+%legend;
 while e >= 1e-5
     x_next = x_prev - (f(x_prev)/f_der(x_prev));
-    e = abs(x_next - x_prev);
+    e = abs(x_next - x_prev);    
+ %   l = refline(f_der(x_prev),f(x_prev)-f_der(x_prev)*x_prev);
+    plot(x_prev,f(x_prev),'kx');
+    plot(x_prev,0,'rx');
     x_prev = x_next;
     iterations = iterations + 1;
 end
 
+print('fig/NewtonMethod.eps','-depsc');
 %% Assignment 2 An imaging problem
-
-%% a
+% a
 s.orig.D = [-1,1;1,1;1,-1;-1,-1];
 s.orig.E = [-0.5,0.5;0,0;0.5,0.5];
 s.orig.I_e = [4,3,1];
@@ -41,14 +54,12 @@ tol = 1e-5;
 s.orig.LSQR.I_e = lsqr(s.orig.A,s.orig.I_d);
 
 %% f
-interval = [-1,1];
+interval = [-0.01,0.01];
 noise = interval(1) + (interval(2) - interval(1)) * rand(length(s.orig.I_d),1);
-
 s.noise.I_d = s.orig.I_d + noise;
 
 [s.noise.moore.I_e,s.noise.moore.A_inv] = SolPseudoInvMoore(s.orig.A,s.noise.I_d,tol);
 [s.noise.SVD.I_e, s.noise.SVD.A_inv] = SolPseudoInvSVD(s.orig.A,s.noise.I_d,0);
-
 
 % Compare Results with detectors manifold times farer away
 factor = 3;
@@ -58,11 +69,17 @@ for i = 1:length(s.orig.D)
         s.orig.moved.A(i,j) = 1./sqrt(sum((s.orig.moved.D(i,:)-s.orig.E(j,:)).^2));
     end
 end
-s.orig.moved.I_d = s.orig.moved.A * s.orig.I_e';
+
+s.noise.moved.I_d = (s.orig.moved.A * s.orig.I_e') + noise;
+
+[s.noise.moved.moore.I_e,s.noise.moved.moore.A_inv] = ...
+    SolPseudoInvMoore(s.orig.moved.A,s.noise.moved.I_d,tol);
+[s.noise.moved.SVD.I_e, s.noise.moved.SVD.A_inv] = ...
+    SolPseudoInvSVD(s.orig.moved.A,s.noise.moved.I_d,0);
 
 % Conditioning
 cond_num = cond(s.orig.A); %7.7273 --> ill-conditioned
-cond_num_hat = cond(s.orig.moved.A); % 25 --> ill-conditioned
+cond_num_hat = cond(s.orig.moved.A); % 25.01 --> ill-conditioned
 
 %% g
 distance = [0.1, 0.1];
@@ -74,8 +91,7 @@ for i = 1:length(s.orig.D)
 end
 
 %% h
-s.orig.added.I_e = s.orig.I_e';
-s.orig.added.I_e = [s.orig.added.I_e; 1; 1];
+s.orig.added.I_e = [s.orig.added.I_e'; 1; 1];
 
 s.orig.added.I_d = s.orig.added.A * s.orig.added.I_e;
 
@@ -104,7 +120,7 @@ y = zeros(length(range));
 max_dist = 0;
 
 
-while max_dist < 9
+while max_dist < 6
 L = int(1) + (int(2) - int(1)) * rand(5);
 
 q_lam = @(lam) (M'*M+lam*(L'*L))\M'*s_tik;
