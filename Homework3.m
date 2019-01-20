@@ -95,24 +95,43 @@ end
 
 %% Tikhonov Regularization
 M = s.orig.added.A;
-L = diag([2,1,0.5,0.1]);
+int = [0,5];
+%diag([2,0.3,0.5,0.1,1]);
 s_tik = s.orig.added.I_d;
+range = 1e-4 * 2.^(0:1:14);
+x = zeros(length(range));
+y = zeros(length(range));
+max_dist = 0;
 
-q_lam = @(lam) (M'*M+lam*L'*L)\M'*s_tik;
+
+while max_dist < 9
+L = int(1) + (int(2) - int(1)) * rand(5);
+
+q_lam = @(lam) (M'*M+lam*(L'*L))\M'*s_tik;
 
 mq_norm = @(lam) norm(M*q_lam(lam)-s_tik,2);
 lq_norm = @(lam) norm(L*q_lam(lam),2);
 q_norm = @(lam) norm(q_lam(lam),2);
 
-range = 1e-4 * 2.^(0:1:14);
-
 x = arrayfun(mq_norm,range);
 y = arrayfun(lq_norm,range);
 
-figure;
+dy = [0,diff(y)];
+ddy = [0, diff(dy)];
+dddy = [0, diff(ddy)];
+max_dist = max(dddy);
+end
+
+fig =figure;
 plot(x,y,'x-');
+hold on
+plot(x,dy);
+plot(x,ddy);
+plot(x,dddy);
+legend;
 
+lamda_opt = y(find(max(dddy)== dddy)+1);
 
-
+q_lam(lamda_opt)
 
 
