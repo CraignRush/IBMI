@@ -1,34 +1,39 @@
 %% IBMI Homework 4
 clear all;
 close all;
+rng default;
 %% Assignment 1 Newton's Method
-f = @(x) ((x.^2)./2) - sin(x);
-f_der = @(x) x - cos(x);
+syms f(x)
+f(x) =  ((x.^2)./2) - sin(x);
+df = diff(f,x);
+ddf = diff(df,x);
 x_prev = 0.5;
 e = 1;
 iterations = 1;
-x = -1:0.001:1;
+x = -0.5:0.001:1.5;
 
 figure;
-plot(x,f(x),'DisplayName','f(x)');
+plot(x,double(f(x)),'LineWidth',1.2,'DisplayName','f(x)');
 hold on
-%plot(x,f_der(x),'DisplayName','f''(x)');
+plot(x,double(df(x)),'LineWidth',1.2,'DisplayName','f''(x)');
 l = refline([0 0]);
 l.Color = [0,0,0];
 l.LineStyle = '-';
 l.LineWidth = 0.1;
 %legend;
 while e >= 1e-5
-    x_next = x_prev - (f(x_prev)/f_der(x_prev));
+    x_next = x_prev - (double(df(x_prev))/double(ddf(x_prev)));
     e = abs(x_next - x_prev);    
- %   l = refline(f_der(x_prev),f(x_prev)-f_der(x_prev)*x_prev);
-    plot(x_prev,f(x_prev),'kx');
+    %l = refline(df(x_prev),df(x_prev)-ddf(x_prev)*x_prev);
+    plot(x_prev,double(f(x_prev)),'kx');
     plot(x_prev,0,'rx');
     x_prev = x_next;
     iterations = iterations + 1;
 end
 
-print('fig/NewtonMethod.eps','-depsc');
+xlabel('x');
+ylabel('y');
+print('fig/NewtonMethod.pdf','-dpdf');
 %% Assignment 2 An imaging problem
 % a
 s.orig.D = [-1,1;1,1;1,-1;-1,-1];
@@ -54,7 +59,7 @@ tol = 1e-5;
 s.orig.LSQR.I_e = lsqr(s.orig.A,s.orig.I_d);
 
 %% f
-interval = [-0.01,0.01];
+interval = [-0.1,0.1];
 noise = interval(1) + (interval(2) - interval(1)) * rand(length(s.orig.I_d),1);
 s.noise.I_d = s.orig.I_d + noise;
 
@@ -91,7 +96,7 @@ for i = 1:length(s.orig.D)
 end
 
 %% h
-s.orig.added.I_e = [s.orig.added.I_e'; 1; 1];
+s.orig.added.I_e = [s.orig.I_e'; 1; 1];
 
 s.orig.added.I_d = s.orig.added.A * s.orig.added.I_e;
 
@@ -101,27 +106,28 @@ s.noise.added.I_d = s.orig.added.A * s.noise.added.I_e;
 
 %% i
 s.orig.added.SVD.truncation = 0:1:2;
-s.orig.added.SVD.I_e = cell(1,length(s.orig.added.SVD.truncation));
-s.orig.added.SVD.A = cell(1,length(s.orig.added.SVD.truncation));
+s.noise.added.SVD.I_e = cell(1,length(s.orig.added.SVD.truncation));
+s.noise.added.SVD.A = cell(1,length(s.orig.added.SVD.truncation));
+
+Level = noise*[0,1,10];
 
 for i = s.orig.added.SVD.truncation
-  [s.orig.added.SVD.I_e{i+1},s.orig.added.SVD.A{i+1}] = SolPseudoInvSVD(s.orig.added.A,s.orig.added.I_d,i);
-  [s.noise.added.SVD.I_e{i+1},s.noise.added.SVD.A{i+1}] = SolPseudoInvSVD(s.orig.added.A,s.noise.added.I_d,i);  
+    for j = 1:size(Level,2)
+     s.noise.added.SVD.I_d = s.orig.added.A * (s.orig.added.I_e + Level(:,j));
+  [s.noise.added.SVD.I_e{i+1},s.noise.added.SVD.A{i+1}] = SolPseudoInvSVD(s.orig.added.A,s.noise.added.SVD.I_d,i);  
+    digits(4);
+    sprintf('Truncation:%d, Noise Level:%d\n',i,Level(1,j)./noise(1))
+%    latex(vpa(sym(s.noise.added.SVD.I_e{i+1})));
+    end
 end
-
 %% Tikhonov Regularization
 M = s.orig.added.A;
-int = [0,5];
-%diag([2,0.3,0.5,0.1,1]);
-s_tik = s.orig.added.I_d;
+s_tik = s.noise.added.I_d;
 range = 1e-4 * 2.^(0:1:14);
 x = zeros(length(range));
 y = zeros(length(range));
-max_dist = 0;
 
-
-while max_dist < 6
-L = int(1) + (int(2) - int(1)) * rand(5);
+L = eye(5) + 0.5*randn(5);
 
 q_lam = @(lam) (M'*M+lam*(L'*L))\M'*s_tik;
 
@@ -136,18 +142,19 @@ dy = [0,diff(y)];
 ddy = [0, diff(dy)];
 dddy = [0, diff(ddy)];
 max_dist = max(dddy);
-end
 
 fig =figure;
-plot(x,y,'x-');
+plot(x,y,'x-','LineWidth',1.2,'DisplayName','L-curve');
 hold on
-plot(x,dy);
-plot(x,ddy);
-plot(x,dddy);
 legend;
+xlabel('||Mq(\lambda) - s||');
+ylabel('||Lq(\lambda)||');
+pos_opt = find(max(dddy)== dddy)+2;
+plot(x(pos_opt),y(pos_opt),'ro','MarkerSize',10,'DisplayName',...
+'Optimal regularization parameter');
+q_lam(x(pos_opt))
+print(fig,'fig/Tikhonov.eps','-dpdf');
 
-lamda_opt = y(find(max(dddy)== dddy)+1);
 
-q_lam(lamda_opt)
 
 
