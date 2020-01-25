@@ -1,0 +1,85 @@
+\subsection*{Assignment 2}
+\addcontentsline{toc}{subsection}{Assignment 2}
+Assume the 2x2 discretization of the spatial distribution of absorption coefficient shown in Fig. 1 and 2 point detectors with spacing L.
+
+\subsubsection*{Task 1}
+\addcontentsline{toc}{subsubsection}{Task 1}
+Design a model matrix A that relates X-ray measurements $p= (p_1, p_2, p_3, p_4, p_5, p_6)^T$ at 3 shown angles to the (unknown) absorption $\mu= (\mu_1, \mu_2, \mu_3, \mu_4)^T$ as in: $ \mathbf{A} \mathbf{µ} = \mathbf{p} $. Show A.
+
+\begin{lstlisting}
+%% 1) Design a model matrix A that relates X-ray measurements 
+% p=(P1,P2,P3,P4,P5,P6)T at 3 shown angles to 
+% the (unknown) absorption mu=(mu1,mu2,mu3,mu4)T as in: A*mu = p. Show A.
+
+% scaling for 45° beams
+a = sqrt(2) - 1; 
+
+syms L;
+
+% setup model matrix
+A = [L, 0, L, 0;
+0, L, 0, L;
+a*L, 0, L, a*L;
+a*L, L, 0, a*L;
+0, 0, L, L;
+L, L, 0, 0];
+
+pretty(A);
+\end{lstlisting}
+
+\begin{equation}
+    \mathbf{A} = \left(\begin{array}{cccc} L & 0 & L & 0\\ 0 & L & 0 & L\\ (\sqrt{2} - 1)L & 0 & L &  (\sqrt{2} - 1)L \\  (\sqrt{2} - 1)L  & L & 0 &  (\sqrt{2} - 1)L \\ 0 & 0 & L & L\\ L & L & 0 & 0 \end{array}\right)
+\end{equation}
+
+
+\subsubsection*{Task 2}
+\addcontentsline{toc}{subsubsection}{Task 2}
+\begin{lstlisting}
+%% 2) Assume a specific distribution (values) of mu_test and a specific value of L
+% Simulate the corresponding measurements mu_test for this distribution
+% using the model matrix A. Show p_test.
+
+L_spec = 4;
+A_subs = double(subs(A,L,L_spec));
+mu_test = rand([4,1]); % assume (random) values of absorption mu
+
+p_test = A_subs*mu_test % simulate corresponding measurements b
+\end{lstlisting}
+
+\begin{equation}
+    P = \left(\begin{array}{c}
+    5,13361736274707\\6,49676346881041\\5,18217061046964\\5,35509078478611\\6,32384329449394\\5,30653753706355 \end{array}\right)
+\end{equation}
+
+
+
+\subsubsection*{Task 3}
+\addcontentsline{toc}{subsubsection}{Task 3}
+\begin{lstlisting}
+%% 3) Using the simulated measurements p_test, reconstruct absorption mu_rec,
+% i.e. solve A*mu_rec=p_test. Show both the assumed (mu_test) and
+% the reconstructed (mu_rec) absorption distributions.
+
+% now we try to recover mu back from our measurements:
+% A*mu = p => mu = inv(A)*p - we try to solve for mu that is assumed unknown
+% inv(A)*p % doesn't work, rank of A is 3!
+
+mu_rec = lsqr(A_subs, p_test); % min||A*mu-p||.^2 - we try to find a solution using minmization procedure
+rel_error_perc = abs(mu_test - mu_rec)./mu_test*100 % looking at the relative error in percent, we're pretty far off from the real values
+\end{lstlisting}
+
+\begin{align*}{4}
+    \mu_{rec}  &= \left(\begin{array}{c} 0,647617630172602\\0,679016754093115\\0,635786710513997\\0,945174113109320 \end{array}\right)\\
+    \mu_{test} &= \left(\begin{array}{c} 0,647617630172602\\0,679016754093115\\0,635786710513997\\0,945174113109320 \end{array}\right)\\
+    rel-error-perc &= \left(\begin{array}{c} 1.2703\cdot 10^{-11}\\ 1.2796\cdot 10^{-11}\\ 1.3672\cdot 10^{-11}\\ 8.6099\cdot 10^{-12} \end{array}\right)
+\end{align*}
+
+
+\subsubsection*{Task 4}
+\addcontentsline{toc}{subsubsection}{Task 4}
+\begin{enumerate}[label=(\alph*)]
+    \item Does the reconstruction $\mu_\text{rec}$ correspond to the assumed distribution mutest of the absorption coefficient?\\
+    According to variable rel-error-perc, $\mu_{rec}$ matches the array $\mu_{test}$ at a relative error smaller than 1E-10 percent. This means, the arrays can considered to be the same.
+    \item Did you use inv() for inverting the model? Why?\\
+     No, because model matrix a A is no square matrix and has a rank of 4.
+\end{enumerate}
