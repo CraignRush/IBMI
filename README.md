@@ -1,7 +1,7 @@
 # IBMI
 Solution for Homework Assignments in Introduction to Biological Imaging (TUM)
 
-
+The individual assignments can be found in the corresponding git branches.
 
 ## Haftungsausschluss
 Die Inhalte dieses Webprojektes wurden sorgfältig geprüft und nach bestem Wissen erstellt. Aber für die hier dargebotenen Informationen wird kein Anspruch auf Vollständigkeit, Aktualität, Qualität und Richtigkeit erhoben. Es kann keine Verantwortung für Schäden übernommen werden, die durch das Vertrauen auf die Inhalte dieser Website oder deren Gebrauch entstehen. 
